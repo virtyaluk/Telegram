@@ -68,8 +68,6 @@ import android.widget.Toast;
 
 import androidx.core.graphics.ColorUtils;
 
-import com.google.android.exoplayer2.util.Log;
-
 import org.telegram.PhoneFormat.PhoneFormat;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ChatObject;

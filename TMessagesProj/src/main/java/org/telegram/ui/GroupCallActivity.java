@@ -42,9 +42,6 @@ import android.text.SpannableStringBuilder;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Property;
-import android.util.SparseArray;
-import android.util.SparseBooleanArray;
-import android.util.SparseIntArray;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
@@ -159,8 +156,6 @@ import java.util.HashSet;
 import java.util.Locale;
 
 import static android.content.Context.AUDIO_SERVICE;
-
-import com.google.android.exoplayer2.util.Log;
 
 public class GroupCallActivity extends BottomSheet implements NotificationCenter.NotificationCenterDelegate, VoIPService.StateListener {
 

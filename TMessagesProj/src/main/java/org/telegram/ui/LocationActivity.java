@@ -78,7 +78,6 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.DialogObject;
 import org.telegram.messenger.FileLoader;
-import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.LocationController;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.FileLog;

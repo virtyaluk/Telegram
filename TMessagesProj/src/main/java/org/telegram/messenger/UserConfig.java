@@ -16,7 +16,6 @@ import android.util.Base64;
 import org.telegram.tgnet.SerializedData;
 import org.telegram.tgnet.TLRPC;
 
-import java.io.File;
 import java.util.Arrays;
 
 public class UserConfig extends BaseController {

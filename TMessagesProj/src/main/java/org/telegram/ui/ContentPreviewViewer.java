@@ -55,7 +55,6 @@ import org.telegram.ui.Cells.ContextLinkCell;
 import org.telegram.ui.Cells.StickerCell;
 import org.telegram.ui.Cells.StickerEmojiCell;
 import org.telegram.ui.Components.AlertsCreator;
-import org.telegram.ui.Components.EmojiView;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RecyclerListView;
 

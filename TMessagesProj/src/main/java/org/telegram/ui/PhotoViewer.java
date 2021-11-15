@@ -66,7 +66,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.LinearSmoothScrollerEnd;
 import androidx.recyclerview.widget.RecyclerView;
 
-import android.text.Editable;
 import android.text.Layout;
 import android.text.Selection;
 import android.text.Spannable;
@@ -126,7 +125,6 @@ import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.analytics.AnalyticsListener;
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout;
-import com.google.android.exoplayer2.util.Log;
 import com.google.android.gms.vision.Frame;
 import com.google.android.gms.vision.face.Face;
 import com.google.android.gms.vision.face.FaceDetector;
@@ -4652,6 +4650,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         paintButton.setContentDescription(LocaleController.getString("AccDescrPhotoEditor", R.string.AccDescrPhotoEditor));
 
         shareButton = new ImageView(containerView.getContext());
+        shareButton.setVisibility(canForwardMedia() ? View.VISIBLE : View.GONE);
         shareButton.setImageResource(R.drawable.share);
         shareButton.setScaleType(ImageView.ScaleType.CENTER);
         shareButton.setBackgroundDrawable(Theme.createSelectorDrawable(Theme.ACTION_BAR_WHITE_SELECTOR_COLOR));
@@ -10005,6 +10004,30 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         return parentChatActivity != null && (parentChatActivity.currentUser != null || parentChatActivity.currentChat != null && !ChatObject.isNotInChat(parentChatActivity.currentChat) && ChatObject.canSendMedia(parentChatActivity.currentChat));
     }
 
+    private boolean canForwardMedia() {
+
+
+        if (parentChatActivity != null) {
+            TLRPC.Chat chat = parentChatActivity.getCurrentChat();
+
+            if (chat != null) {
+                return !chat.noforwards;
+            }
+        }
+
+        return true;
+    }
+
+//    private boolean noForwards() {
+//        TLRPC.Chat currentChat = null;
+//
+//        if (!DialogObject.isEncryptedDialog(currentDialogId) && !DialogObject.isUserDialog(currentDialogId)) {
+//            currentChat = profileActivity.getMessagesController().getChat(-currentDialogId);
+//        }
+//
+//        return currentChat != null && currentChat.noforwards;
+//    }
+
     private void setDoubleTapEnabled(boolean value) {
         doubleTapEnabled = value;
         gestureDetector.setOnDoubleTapListener(value ? this : null);
@@ -11992,7 +12015,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             } else {
                 windowLayoutParams.flags = WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM;
             }
-            if (chatActivity != null && chatActivity.getCurrentEncryptedChat() != null) {
+            if ((chatActivity != null && chatActivity.getCurrentEncryptedChat() != null) || !canForwardMedia()) {
                 windowLayoutParams.flags |= WindowManager.LayoutParams.FLAG_SECURE;
             } else {
                 windowLayoutParams.flags &=~ WindowManager.LayoutParams.FLAG_SECURE;

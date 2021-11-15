@@ -220,6 +220,12 @@ public class ActionBarMenuItem extends FrameLayout {
         longClickEnabled = value;
     }
 
+    public void setTooltipText(CharSequence text) {
+        if (Build.VERSION.SDK_INT >= 26) {
+            iconView.setTooltipText(text);
+        }
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {

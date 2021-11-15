@@ -7,21 +7,10 @@ import android.media.MediaExtractor;
 import android.media.MediaFormat;
 import android.os.Build;
 
-import com.google.android.exoplayer2.util.Log;
-
-import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.FileLog;
-import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MediaController;
-import org.telegram.messenger.NotificationCenter;
-import org.telegram.messenger.NotificationsController;
-import org.telegram.messenger.R;
-import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.VideoEditedInfo;
-import org.telegram.ui.Components.Bulletin;
-import org.telegram.ui.Components.BulletinFactory;
-import org.telegram.ui.LaunchActivity;
 
 import java.io.File;
 import java.nio.ByteBuffer;

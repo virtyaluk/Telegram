@@ -118,6 +118,8 @@ public class NotificationCenter {
     public static final int stickersImportProgressChanged = totalEvents++;
     public static final int stickersImportComplete = totalEvents++;
     public static final int dialogDeleted = totalEvents++;
+    public static final int chatNoForwardsChange = totalEvents++;
+    public static final int newSendAsPeerSelected = totalEvents++;
 
     public static final int walletPendingTransactionsChanged = totalEvents++;
     public static final int walletSyncProgressChanged = totalEvents++;

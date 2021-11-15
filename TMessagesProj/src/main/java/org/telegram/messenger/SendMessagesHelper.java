@@ -3105,6 +3105,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         long linkedToGroup = 0;
         TLRPC.EncryptedChat encryptedChat = null;
         TLRPC.InputPeer sendToPeer = !DialogObject.isEncryptedDialog(peer) ? getMessagesController().getInputPeer(peer) : null;
+        TLRPC.InputPeer defaultSendAs = null;
         long myId = getUserConfig().getClientUserId();
         if (DialogObject.isEncryptedDialog(peer)) {
             encryptedChat = getMessagesController().getEncryptedChat(DialogObject.getEncryptedChatId(peer));
@@ -3119,12 +3120,15 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
             }
         } else if (sendToPeer instanceof TLRPC.TL_inputPeerChannel) {
             TLRPC.Chat chat = getMessagesController().getChat(sendToPeer.channel_id);
+            TLRPC.ChatFull chatFull = getMessagesController().getChatFull(chat.id);
             isChannel = chat != null && !chat.megagroup;
             if (isChannel && chat.has_link) {
-                TLRPC.ChatFull chatFull = getMessagesController().getChatFull(chat.id);
                 if (chatFull != null) {
                     linkedToGroup = chatFull.linked_chat_id;
                 }
+            }
+            if (chatFull != null && chatFull.default_send_as != null) {
+                defaultSendAs = getMessagesController().getInputPeer(chatFull.default_send_as);
             }
             anonymously = ChatObject.shouldSendAnonymously(chat);
         }
@@ -3637,6 +3641,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                     reqSend.silent = newMsg.silent;
                     reqSend.peer = sendToPeer;
                     reqSend.random_id = newMsg.random_id;
+                    reqSend.send_as = defaultSendAs;
                     if (newMsg.reply_to != null && newMsg.reply_to.reply_to_msg_id != 0) {
                         reqSend.flags |= 1;
                         reqSend.reply_to_msg_id = newMsg.reply_to.reply_to_msg_id;
@@ -3959,6 +3964,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                             request = new TLRPC.TL_messages_sendMultiMedia();
                             request.peer = sendToPeer;
                             request.silent = newMsg.silent;
+                            request.send_as = defaultSendAs;
                             if (newMsg.reply_to != null && newMsg.reply_to.reply_to_msg_id != 0) {
                                 request.flags |= 1;
                                 request.reply_to_msg_id = newMsg.reply_to.reply_to_msg_id;
@@ -3991,6 +3997,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                         TLRPC.TL_messages_sendMedia request = new TLRPC.TL_messages_sendMedia();
                         request.peer = sendToPeer;
                         request.silent = newMsg.silent;
+                        request.send_as = defaultSendAs;
                         if (newMsg.reply_to != null && newMsg.reply_to.reply_to_msg_id != 0) {
                             request.flags |= 1;
                             request.reply_to_msg_id = newMsg.reply_to.reply_to_msg_id;
@@ -4331,6 +4338,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                 TLRPC.TL_messages_forwardMessages reqSend = new TLRPC.TL_messages_forwardMessages();
                 reqSend.to_peer = sendToPeer;
                 reqSend.with_my_score = retryMessageObject.messageOwner.with_my_score;
+                reqSend.send_as = defaultSendAs;
                 if (params != null && params.containsKey("fwd_id")) {
                     int fwdId = Utilities.parseInt(params.get("fwd_id"));
                     reqSend.drop_author = true;
@@ -4372,6 +4380,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                 reqSend.peer = sendToPeer;
                 reqSend.random_id = newMsg.random_id;
                 reqSend.hide_via = !params.containsKey("bot");
+                reqSend.send_as = defaultSendAs;
                 if (newMsg.reply_to != null && newMsg.reply_to.reply_to_msg_id != 0) {
                     reqSend.flags |= 1;
                     reqSend.reply_to_msg_id = newMsg.reply_to.reply_to_msg_id;

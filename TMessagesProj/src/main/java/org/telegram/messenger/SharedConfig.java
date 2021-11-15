@@ -23,7 +23,6 @@ import android.util.SparseArray;
 import org.json.JSONObject;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.SerializedData;
-import org.telegram.ui.Components.SharedMediaLayout;
 import org.telegram.ui.Components.SwipeGestureSettingsView;
 import org.telegram.tgnet.TLRPC;
 

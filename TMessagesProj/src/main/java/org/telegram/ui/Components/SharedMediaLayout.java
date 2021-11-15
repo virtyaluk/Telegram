@@ -1,7 +1,6 @@
 package org.telegram.ui.Components;
 
 import static org.telegram.messenger.MediaDataController.MEDIA_PHOTOVIDEO;
-import static org.telegram.messenger.MediaDataController.getMediaType;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -55,8 +54,6 @@ import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
-import com.google.android.exoplayer2.util.Log;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
@@ -1110,6 +1107,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         mediaColumnsCount = SharedConfig.mediaColumnsCount;
 
         profileActivity.getNotificationCenter().addObserver(this, NotificationCenter.mediaDidLoad);
+        profileActivity.getNotificationCenter().addObserver(this, NotificationCenter.chatNoForwardsChange);
         profileActivity.getNotificationCenter().addObserver(this, NotificationCenter.messagesDeleted);
         profileActivity.getNotificationCenter().addObserver(this, NotificationCenter.didReceiveNewMessages);
         profileActivity.getNotificationCenter().addObserver(this, NotificationCenter.messageReceivedByServer);
@@ -1432,6 +1430,8 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             actionModeLayout.addView(forwardItem, new LinearLayout.LayoutParams(AndroidUtilities.dp(54), ViewGroup.LayoutParams.MATCH_PARENT));
             actionModeViews.add(forwardItem);
             forwardItem.setOnClickListener(v -> onActionBarItemClick(forward));
+
+            updateForwardButton();
         }
         deleteItem = new ActionBarMenuItem(context, null, Theme.getColor(Theme.key_actionBarActionModeDefaultSelector), Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2), false);
         deleteItem.setIcon(R.drawable.msg_delete);
@@ -2143,6 +2143,16 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         }
     }
 
+    private boolean noForwards() {
+        TLRPC.Chat currentChat = null;
+
+        if (!DialogObject.isEncryptedDialog(dialog_id) && !DialogObject.isUserDialog(dialog_id)) {
+            currentChat = profileActivity.getMessagesController().getChat(-dialog_id);
+        }
+
+        return currentChat != null && currentChat.noforwards;
+    }
+
     private int getMessageId(View child) {
         if (child instanceof SharedPhotoVideoCell2) {
             return ((SharedPhotoVideoCell2) child).getMessageId();
@@ -2847,6 +2857,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
 
     public void onDestroy() {
         profileActivity.getNotificationCenter().removeObserver(this, NotificationCenter.mediaDidLoad);
+        profileActivity.getNotificationCenter().removeObserver(this, NotificationCenter.chatNoForwardsChange);
         profileActivity.getNotificationCenter().removeObserver(this, NotificationCenter.didReceiveNewMessages);
         profileActivity.getNotificationCenter().removeObserver(this, NotificationCenter.messagesDeleted);
         profileActivity.getNotificationCenter().removeObserver(this, NotificationCenter.messageReceivedByServer);
@@ -3478,9 +3489,38 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         actionModeAnimation.start();
     }
 
+    public void updateForwardButton() {
+        if (forwardItem == null) {
+            return;
+        }
+
+        TLRPC.Chat currentChat = null;
+
+        if (!DialogObject.isEncryptedDialog(dialog_id) && !DialogObject.isUserDialog(dialog_id)) {
+            currentChat = profileActivity.getMessagesController().getChat(-dialog_id);
+        }
+
+        if (noForwards()) {
+            forwardItem.setEnabled(false);
+            forwardItem.setAlpha(0.5f);
+
+            if (currentChat != null && ChatObject.isChannel(currentChat)) {
+                forwardItem.setTooltipText(LocaleController.getString("ChannelRestrictSavingContentTooltip2", R.string.ChannelRestrictSavingContentTooltip2));
+            } else {
+                forwardItem.setTooltipText(LocaleController.getString("GroupsRestrictSavingContentTooltip2", R.string.GroupsRestrictSavingContentTooltip2));
+            }
+        } else {
+            forwardItem.setEnabled(true);
+            forwardItem.setAlpha(1f);
+            forwardItem.setTooltipText(null);
+        }
+    }
+
     @Override
     public void didReceivedNotification(int id, int account, Object... args) {
-        if (id == NotificationCenter.mediaDidLoad) {
+        if (id == NotificationCenter.chatNoForwardsChange) {
+            updateForwardButton();
+        } else if (id == NotificationCenter.mediaDidLoad) {
             long uid = (Long) args[0];
             int guid = (Integer) args[3];
             int requestIndex = (Integer) args[7];

@@ -20,7 +20,6 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 
 import com.google.zxing.BarcodeFormat;
@@ -33,7 +32,6 @@ import com.google.zxing.qrcode.encoder.QRCode;
 
 import org.telegram.messenger.R;
 import org.telegram.messenger.SvgHelper;
-import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.RLottieDrawable;
 
 import java.util.Arrays;

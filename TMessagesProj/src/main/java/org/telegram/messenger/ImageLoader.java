@@ -14,8 +14,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
@@ -31,8 +29,6 @@ import android.os.SystemClock;
 import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.util.SparseArray;
-
-import com.google.android.exoplayer2.util.Log;
 
 import org.json.JSONArray;
 import org.json.JSONObject;

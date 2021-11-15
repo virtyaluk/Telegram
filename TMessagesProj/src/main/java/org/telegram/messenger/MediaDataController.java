@@ -32,7 +32,6 @@ import android.text.Spanned;
 import android.text.SpannedString;
 import android.text.TextUtils;
 import android.text.style.CharacterStyle;
-import android.util.Log;
 import android.util.SparseArray;
 
 import org.telegram.SQLite.SQLiteCursor;
@@ -48,7 +47,6 @@ import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.Components.AvatarDrawable;
 import org.telegram.ui.Components.Bulletin;
-import org.telegram.ui.Components.SharedMediaLayout;
 import org.telegram.ui.Components.StickerSetBulletinLayout;
 import org.telegram.ui.Components.StickersArchiveAlert;
 import org.telegram.ui.Components.TextStyleSpan;
@@ -58,7 +56,6 @@ import org.telegram.ui.LaunchActivity;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;

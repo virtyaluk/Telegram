@@ -54,21 +54,27 @@ public class GroupCreateSpan extends View {
     private boolean deleting;
     private long lastUpdateTime;
     private int[] colors = new int[8];
+    private boolean isJustProfilePicture;
 
     public GroupCreateSpan(Context context, Object object) {
-        this(context, object, null);
+        this(context, object, null, false);
+    }
+
+    public GroupCreateSpan(Context context, Object object, boolean isProfilePicture) {
+        this(context, object, null, isProfilePicture);
     }
 
     public GroupCreateSpan(Context context, ContactsController.Contact contact) {
-        this(context, null, contact);
+        this(context, null, contact, false);
     }
 
-    public GroupCreateSpan(Context context, Object object, ContactsController.Contact contact) {
+    public GroupCreateSpan(Context context, Object object, ContactsController.Contact contact, boolean isProfilePicture) {
         super(context);
 
         currentContact = contact;
         deleteDrawable = getResources().getDrawable(R.drawable.delete);
         textPaint.setTextSize(AndroidUtilities.dp(14));
+        isJustProfilePicture = isProfilePicture;
 
         String firstName;
 
@@ -134,7 +140,7 @@ public class GroupCreateSpan extends View {
                 avatarDrawable.setAvatarType(AvatarDrawable.AVATAR_TYPE_REPLIES);
                 imageLocation = null;
                 imageParent = null;
-            } else if (UserObject.isUserSelf(user)) {
+            } else if (!isJustProfilePicture && UserObject.isUserSelf(user)) {
                 firstName = LocaleController.getString("SavedMessages", R.string.SavedMessages);
                 avatarDrawable.setSmallSize(true);
                 avatarDrawable.setAvatarType(AvatarDrawable.AVATAR_TYPE_SAVED);
@@ -178,12 +184,38 @@ public class GroupCreateSpan extends View {
             maxNameWidth = (Math.min(AndroidUtilities.displaySize.x, AndroidUtilities.displaySize.y) - AndroidUtilities.dp(32 + 18 + 57 * 2)) / 2;
         }
 
-        CharSequence name = TextUtils.ellipsize(firstName.replace('\n', ' '), textPaint, maxNameWidth, TextUtils.TruncateAt.END);
-        nameLayout = new StaticLayout(name, textPaint, 1000, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
-        if (nameLayout.getLineCount() > 0) {
-            textWidth = (int) Math.ceil(nameLayout.getLineWidth(0));
-            textX = -nameLayout.getLineLeft(0);
+        if (!isJustProfilePicture) {
+            CharSequence name = TextUtils.ellipsize(firstName.replace('\n', ' '), textPaint, maxNameWidth, TextUtils.TruncateAt.END);
+            nameLayout = new StaticLayout(name, textPaint, 1000, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
+
+            if (nameLayout.getLineCount() > 0) {
+                textWidth = (int) Math.ceil(nameLayout.getLineWidth(0));
+                textX = -nameLayout.getLineLeft(0);
+            }
         }
+        imageReceiver.setImage(imageLocation, "50_50", avatarDrawable, 0, null, imageParent, 1);
+        updateColors();
+    }
+
+    public void setObject(Object object) {
+        ImageLocation imageLocation;
+        Object imageParent;
+
+        if (object instanceof TLRPC.User) {
+            TLRPC.User user = (TLRPC.User) object;
+            avatarDrawable.setInfo(user);
+            imageLocation = ImageLocation.getForUserOrChat(user, ImageLocation.TYPE_SMALL);
+            imageParent = user;
+        } else if (object instanceof TLRPC.Chat) {
+            TLRPC.Chat chat = (TLRPC.Chat) object;
+            avatarDrawable.setInfo(chat);
+            imageLocation = ImageLocation.getForUserOrChat(chat, ImageLocation.TYPE_SMALL);
+            imageParent = chat;
+        } else {
+            imageLocation = null;
+            imageParent = null;
+        }
+
         imageReceiver.setImage(imageLocation, "50_50", avatarDrawable, 0, null, imageParent, 1);
         updateColors();
     }
@@ -267,7 +299,9 @@ public class GroupCreateSpan extends View {
         canvas.save();
         rect.set(0, 0, getMeasuredWidth(), AndroidUtilities.dp(32));
         backPaint.setColor(Color.argb(colors[6] + (int) ((colors[7] - colors[6]) * progress), colors[0] + (int) ((colors[1] - colors[0]) * progress), colors[2] + (int) ((colors[3] - colors[2]) * progress), colors[4] + (int) ((colors[5] - colors[4]) * progress)));
-        canvas.drawRoundRect(rect, AndroidUtilities.dp(16), AndroidUtilities.dp(16), backPaint);
+        if (!isJustProfilePicture) {
+            canvas.drawRoundRect(rect, AndroidUtilities.dp(16), AndroidUtilities.dp(16), backPaint);
+        }
         imageReceiver.draw(canvas);
         if (progress != 0) {
             int color = avatarDrawable.getColor();
@@ -283,18 +317,26 @@ public class GroupCreateSpan extends View {
             canvas.restore();
         }
         canvas.translate(textX + AndroidUtilities.dp(32 + 9), AndroidUtilities.dp(8));
-        int text = Theme.getColor(Theme.key_groupcreate_spanText);
-        int textSelected = Theme.getColor(Theme.key_avatar_text);
-        textPaint.setColor(ColorUtils.blendARGB(text, textSelected, progress));
 
-        nameLayout.draw(canvas);
+        if (!isJustProfilePicture) {
+            int text = Theme.getColor(Theme.key_groupcreate_spanText);
+            int textSelected = Theme.getColor(Theme.key_avatar_text);
+            textPaint.setColor(ColorUtils.blendARGB(text, textSelected, progress));
+
+            nameLayout.draw(canvas);
+        }
+
         canvas.restore();
     }
 
     @Override
     public void onInitializeAccessibilityNodeInfo(AccessibilityNodeInfo info) {
         super.onInitializeAccessibilityNodeInfo(info);
-        info.setText(nameLayout.getText());
+
+        if (!isJustProfilePicture) {
+            info.setText(nameLayout.getText());
+        }
+
         if (isDeleting() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
             info.addAction(new AccessibilityNodeInfo.AccessibilityAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_CLICK.getId(), LocaleController.getString("Delete", R.string.Delete)));
     }

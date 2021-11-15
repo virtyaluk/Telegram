@@ -15,7 +15,6 @@ import android.content.pm.ActivityInfo;
 import android.database.DataSetObserver;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.Shader;
 import android.graphics.SurfaceTexture;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -33,7 +32,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.FrameLayout;
-import android.widget.ImageView;
 import android.widget.ScrollView;
 import android.widget.TextView;
 

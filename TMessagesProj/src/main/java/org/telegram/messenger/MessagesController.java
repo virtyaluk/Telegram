@@ -21,7 +21,6 @@ import android.os.SystemClock;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.Base64;
-import android.util.Log;
 import android.util.SparseArray;
 import android.util.SparseBooleanArray;
 import android.util.SparseIntArray;
@@ -9110,6 +9109,19 @@ public class MessagesController extends BaseController implements NotificationCe
             if (response != null) {
                 processUpdates((TLRPC.Updates) response, false);
                 AndroidUtilities.runOnUIThread(() -> getNotificationCenter().postNotificationName(NotificationCenter.updateInterfaces, UPDATE_MASK_CHAT));
+            }
+        }, ConnectionsManager.RequestFlagInvokeAfter);
+    }
+
+    public void toggleNoForwards(long chatId, boolean enabled) {
+        TLRPC.TL_messages_toggleNoForwards req = new TLRPC.TL_messages_toggleNoForwards();
+        req.peer = getInputPeer(-chatId);
+        req.enabled = enabled;
+
+        getConnectionsManager().sendRequest(req, (response, error) -> {
+            if (response != null) {
+                processUpdates((TLRPC.Updates) response, false);
+                AndroidUtilities.runOnUIThread(() -> getNotificationCenter().postNotificationName(NotificationCenter.chatNoForwardsChange));
             }
         }, ConnectionsManager.RequestFlagInvokeAfter);
     }

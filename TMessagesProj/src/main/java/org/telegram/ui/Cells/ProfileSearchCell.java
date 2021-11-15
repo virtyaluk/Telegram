@@ -35,7 +35,6 @@ import org.telegram.messenger.UserConfig;
 import org.telegram.ui.Components.AvatarDrawable;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.CheckBox2;
-import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.NotificationsSettingsActivity;
 
 public class ProfileSearchCell extends BaseCell {

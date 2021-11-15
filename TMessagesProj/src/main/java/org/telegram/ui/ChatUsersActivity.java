@@ -23,7 +23,6 @@ import android.text.Spanned;
 import android.text.TextPaint;
 import android.text.TextUtils;
 import android.text.style.ForegroundColorSpan;
-import android.util.SparseArray;
 import android.util.SparseIntArray;
 import android.util.TypedValue;
 import android.view.Gravity;

@@ -116,6 +116,7 @@ import org.telegram.messenger.Utilities;
 import org.telegram.messenger.VideoEditedInfo;
 import org.telegram.messenger.camera.CameraController;
 import org.telegram.tgnet.ConnectionsManager;
+import org.telegram.tgnet.TLObject;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.ActionBarMenuSubItem;
@@ -248,6 +249,8 @@ public class ChatActivityEnterView extends FrameLayout implements NotificationCe
     private float searchToOpenProgress;
 
     private HashMap<View, Float> animationParamsX = new HashMap<>();
+
+    private GroupCreateSpan sendAsPeerButton;
 
     private class SeekBarWaveformView extends View {
 
@@ -1671,6 +1674,8 @@ public class ChatActivityEnterView extends FrameLayout implements NotificationCe
         NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.messageReceivedByServer);
         NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.sendingMessagesChanged);
         NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.audioRecordTooShort);
+        NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.newSendAsPeerSelected);
+        NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.chatInfoDidLoad);
         NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.emojiLoaded);
 
         parentActivity = context;
@@ -1724,7 +1729,38 @@ public class ChatActivityEnterView extends FrameLayout implements NotificationCe
             }
         };
         frameLayout.setClipChildren(false);
-        textFieldContainer.addView(frameLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM, 0, 0, 48, 0));
+
+
+        TLRPC.Chat curChat = parentFragment.getCurrentChat();
+        int textFieldContainerLeftMargin = 0;
+
+        if ((curChat.megagroup && curChat.username != null && curChat.username.length() > 0) || curChat.has_geo || (curChat.megagroup && curChat.has_link)) {
+            textFieldContainerLeftMargin += 42;
+            TLObject object = parentFragment.getCurrentSendAsPeerObject();
+
+            if (object != null) {
+                sendAsPeerButton = new GroupCreateSpan(context, object, true);
+            } else {
+                TLRPC.User obj = UserConfig.getInstance(UserConfig.selectedAccount).getCurrentUser();
+                sendAsPeerButton = new GroupCreateSpan(context, obj, true);
+            }
+
+            sendAsPeerButton.setOnClickListener(v -> {
+                GroupCreateSpan span = (GroupCreateSpan) v;
+                if (span.isDeleting()) {
+                    span.cancelDeleteAnimation();
+                    parentFragment.hiderSendAsPicker();
+                } else {
+                    span.startDeleteAnimation();
+
+                    parentFragment.showSendAsPeersPicker();
+                }
+            });
+
+            textFieldContainer.addView(sendAsPeerButton, LayoutHelper.createFrame(48, 48, Gravity.CENTER | Gravity.LEFT, 10, 0, 0, 0));
+        }
+
+        textFieldContainer.addView(frameLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM, textFieldContainerLeftMargin, 0, 48, 0));
 
         for (int a = 0; a < 2; a++) {
             emojiButton[a] = new ImageView(context) {
@@ -1743,7 +1779,7 @@ public class ChatActivityEnterView extends FrameLayout implements NotificationCe
             if (Build.VERSION.SDK_INT >= 21) {
                 emojiButton[a].setBackgroundDrawable(Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector)));
             }
-            frameLayout.addView(emojiButton[a], LayoutHelper.createFrame(48, 48, Gravity.BOTTOM | Gravity.LEFT, 3, 0, 0, 0));
+          frameLayout.addView(emojiButton[a], LayoutHelper.createFrame(48, 48, Gravity.BOTTOM | Gravity.LEFT, 3, 0, 0, 0));
             emojiButton[a].setOnClickListener(view -> {
                 if (adjustPanLayoutHelper != null && adjustPanLayoutHelper.animationInProgress()) {
                     return;
@@ -2996,6 +3032,19 @@ public class ChatActivityEnterView extends FrameLayout implements NotificationCe
         checkChannelRights();
     }
 
+    private void updateSendAsInterface() {
+        parentFragment.hiderSendAsPicker();
+
+        if (sendAsPeerButton == null) {
+            return;
+        }
+
+        TLObject object = parentFragment.getCurrentSendAsPeerObject();
+        sendAsPeerButton.setObject(object);
+
+        sendAsPeerButton.cancelDeleteAnimation();
+    }
+
     private void checkBotMenu() {
         if (botCommandsMenuButton != null) {
             botCommandsMenuButton.setExpanded(TextUtils.isEmpty(messageEditText.getText()) && !(keyboardVisible || waitingForKeyboardOpen || isPopupShowing()), true);
@@ -3663,6 +3712,8 @@ public class ChatActivityEnterView extends FrameLayout implements NotificationCe
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.messageReceivedByServer);
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.sendingMessagesChanged);
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.audioRecordTooShort);
+        NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.newSendAsPeerSelected);
+        NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.chatInfoDidLoad);
         NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.emojiLoaded);
         if (emojiView != null) {
             emojiView.onDestroy();
@@ -7625,6 +7676,10 @@ public class ChatActivityEnterView extends FrameLayout implements NotificationCe
             }
         } else if (id == NotificationCenter.audioRecordTooShort) {
             updateRecordIntefrace(RECORD_STATE_CANCEL_BY_TIME);
+        } else if (id == NotificationCenter.newSendAsPeerSelected) {
+            updateSendAsInterface();
+        } else if (id == NotificationCenter.chatInfoDidLoad) {
+            updateSendAsInterface();
         }
     }
 

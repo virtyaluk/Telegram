@@ -16,7 +16,6 @@ import static org.webrtc.MediaCodecUtils.QCOM_PREFIX;
 import static org.webrtc.MediaCodecUtils.HISI_PREFIX;
 
 import android.media.MediaCodecInfo;
-import android.media.MediaCodecList;
 import android.os.Build;
 
 import org.telegram.messenger.voip.Instance;

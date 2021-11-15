@@ -4,7 +4,6 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.graphics.Paint;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
