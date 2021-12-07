@@ -23,6 +23,8 @@ import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.TransitionDrawable;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Message;
 import android.os.SystemClock;
 import android.text.Layout;
 import android.text.StaticLayout;
@@ -60,6 +62,8 @@ import androidx.recyclerview.widget.RecyclerView;
 public class RecyclerListView extends RecyclerView {
 
     private OnItemClickListener onItemClickListener;
+    private OnItemDoubleClickListener onItemDoubleClickListener;
+    private boolean supportDoubleTap = false;
     private OnItemClickListenerExtended onItemClickListenerExtended;
     private OnItemLongClickListener onItemLongClickListener;
     private OnItemLongClickListenerExtended onItemLongClickListenerExtended;
@@ -153,6 +157,10 @@ public class RecyclerListView extends RecyclerView {
 
     public interface OnItemClickListener {
         void onItemClick(View view, int position);
+    }
+
+    public interface OnItemDoubleClickListener {
+        void onItemDoubleClick(View view, int position, float x, float y);
     }
 
     public interface OnItemClickListenerExtended {
@@ -723,8 +731,11 @@ public class RecyclerListView extends RecyclerView {
 
         public RecyclerListViewItemClickListener(Context context) {
             gestureDetector = new GestureDetector(context, new GestureDetector.OnGestureListener() {
-                @Override
-                public boolean onSingleTapUp(MotionEvent e) {
+                private static final long DOUBLE_PRESS_INTERVAL = 250;
+                private long lastPressTime;
+                private boolean mHasDoubleClicked = false;
+
+                private void singleTapAction(MotionEvent e, View currentChildView, int currentChildPosition) {
                     if (currentChildView != null && (onItemClickListener != null || onItemClickListenerExtended != null)) {
                         final float x = e.getX();
                         final float y = e.getY();
@@ -772,6 +783,51 @@ public class RecyclerListView extends RecyclerView {
                             removeSelection(pressedChild, e);
                         }
                     }
+                }
+
+                private void doubleTapAction(MotionEvent e, View currentChildView, int currentChildPosition) {
+                    if (currentChildView != null && onItemDoubleClickListener != null) {
+                        final float x = e.getX();
+                        final float y = e.getY();
+                        final View view = currentChildView;
+                        final int position = currentChildPosition;
+
+                        if (position != -1) {
+                            onItemDoubleClickListener.onItemDoubleClick(currentChildView, currentChildPosition, x - view.getX(), y - view.getY());
+                        }
+                    }
+                }
+
+                @Override
+                public boolean onSingleTapUp(MotionEvent e) {
+                    View view = currentChildView;
+                    int pos = currentChildPosition;
+
+                    if (supportDoubleTap) {
+                        long pressTime = System.currentTimeMillis();
+
+                        if (pressTime - lastPressTime <= DOUBLE_PRESS_INTERVAL) {
+                            doubleTapAction(e, view, pos);
+                            mHasDoubleClicked = true;
+                        } else {
+                            mHasDoubleClicked = false;
+                            Handler myHandler = new Handler() {
+                                public void handleMessage(Message m) {
+                                    if (!mHasDoubleClicked) {
+                                        singleTapAction(e, view, pos);
+                                    }
+                                }
+                            };
+
+                            Message m = new Message();
+                            myHandler.sendMessageDelayed(m, DOUBLE_PRESS_INTERVAL);
+                        }
+
+                        lastPressTime = pressTime;
+                    } else {
+                        singleTapAction(e, view, pos);
+                    }
+
                     return true;
                 }
 
@@ -1426,6 +1482,11 @@ public class RecyclerListView extends RecyclerView {
 
     public void setOnItemClickListener(OnItemClickListener listener) {
         onItemClickListener = listener;
+    }
+
+    public void setOnItemDoubleClickListener(OnItemDoubleClickListener listener) {
+        onItemDoubleClickListener = listener;
+        supportDoubleTap = true;
     }
 
     public void setOnItemClickListener(OnItemClickListenerExtended listener) {

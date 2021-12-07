@@ -54,6 +54,7 @@ import org.telegram.ui.ProfileActivity;
 import org.telegram.ui.Components.SwipeGestureSettingsView;
 
 import java.io.File;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -130,9 +131,11 @@ public class MessagesController extends BaseController implements NotificationCe
     public boolean blockedEndReached;
 
     private LongSparseArray<ArrayList<Integer>> channelViewsToSend = new LongSparseArray<>();
+    private LongSparseArray<ArrayList<Integer>> messagesReactionsToCheck = new LongSparseArray<>();
     private LongSparseArray<SparseArray<MessageObject>> pollsToCheck = new LongSparseArray<>();
     private int pollsToCheckSize;
     private long lastViewsCheckTime;
+    private long lastMessagesReactionsCheckTime;
 
     public ArrayList<DialogFilter> dialogFilters = new ArrayList<>();
     public SparseArray<DialogFilter> dialogFiltersById = new SparseArray<>();
@@ -318,6 +321,7 @@ public class MessagesController extends BaseController implements NotificationCe
     public String autologinToken;
     public HashMap<String, DiceFrameSuccess> diceSuccess = new HashMap<>();
     public HashMap<String, EmojiSound> emojiSounds = new HashMap<>();
+    public HashMap<String, TLRPC.TL_availableReaction> availableReactions = new HashMap<>();
     public HashMap<Long, ArrayList<TLRPC.TL_sendMessageEmojiInteraction>> emojiInteractions = new HashMap<>();
 
     private SharedPreferences notificationsPreferences;
@@ -2568,6 +2572,7 @@ public class MessagesController extends BaseController implements NotificationCe
         joiningToChannels.clear();
         migratedChats.clear();
         channelViewsToSend.clear();
+        messagesReactionsToCheck.clear();
         pollsToCheck.clear();
         pollsToCheckSize = 0;
         dialogsServerOnly.clear();
@@ -5433,6 +5438,36 @@ public class MessagesController extends BaseController implements NotificationCe
                 });
             }
         }
+
+        if (Math.abs(System.currentTimeMillis() - lastMessagesReactionsCheckTime) >= 15000) {
+            lastMessagesReactionsCheckTime = System.currentTimeMillis();
+
+            if (messagesReactionsToCheck.size() != 0) {
+                for (int a = 0; a < messagesReactionsToCheck.size(); a++) {
+                    long key = messagesReactionsToCheck.keyAt(a);
+                    TLRPC.TL_messages_getMessagesReactions req = new TLRPC.TL_messages_getMessagesReactions();
+                    req.peer = getInputPeer(key);
+                    req.id = messagesReactionsToCheck.valueAt(a);
+
+                    getConnectionsManager().sendRequest(req, (response, error) -> {
+                        if (error == null && response instanceof TLRPC.TL_updates) {
+                            TLRPC.TL_updates updates = (TLRPC.TL_updates) response;
+
+                            getMessagesStorage().putUsersAndChats(updates.users, updates.chats, true, true);
+                            processUpdates(updates, false);
+
+                            AndroidUtilities.runOnUIThread(() -> {
+                                putUsers(updates.users, false);
+                                putChats(updates.chats, false);
+                            });
+                        }
+                    });
+                }
+
+                messagesReactionsToCheck.clear();
+            }
+        }
+
         if (!onlinePrivacy.isEmpty()) {
             ArrayList<Long> toRemove = null;
             for (ConcurrentHashMap.Entry<Long, Integer> entry : onlinePrivacy.entrySet()) {
@@ -6785,6 +6820,40 @@ public class MessagesController extends BaseController implements NotificationCe
             getMessagesStorage().setDialogsFolderId(null, req.folder_peers, 0, folderId);
         }
         return folderCreated == null ? 0 : (folderCreated[0] ? 2 : 1);
+    }
+
+    public void loadAvailableReactions() {
+        UserConfig userConfig = getUserConfig();
+        long curUnixTime = Instant.now().getEpochSecond();
+        int checkAvailableReactionsThreshold = 3600;
+
+        if (userConfig.lastAvailableReactionsHash != 0 && userConfig.lastAvailableReactionsSyncTime != -1 && curUnixTime - userConfig.lastAvailableReactionsSyncTime < checkAvailableReactionsThreshold) {
+            getMessagesStorage().getAvailableReactions();
+
+            return;
+        }
+
+        TLRPC.TL_messages_getAvailableReactions req = new TLRPC.TL_messages_getAvailableReactions();
+//        req.hash = getUserConfig().lastAvailableReactionsHash;
+
+        getConnectionsManager().sendRequest(req, (response, error) -> {
+            if (error != null) {
+                return;
+            }
+
+            if (response instanceof TLRPC.TL_messages_availableReactionsNotModified) {
+                return;
+            }
+
+            TLRPC.TL_messages_availableReactions availableReactions = (TLRPC.TL_messages_availableReactions) response;
+
+            getMessagesStorage().addAvailableReactions(availableReactions.reactions);
+
+            userConfig.lastAvailableReactionsHash = availableReactions.hash;
+            userConfig.lastAvailableReactionsSyncTime = curUnixTime;
+
+            userConfig.saveConfig(false);
+        });
     }
 
     public void loadDialogs(final int folderId, int offset, int count, boolean fromCache) {
@@ -8461,6 +8530,23 @@ public class MessagesController extends BaseController implements NotificationCe
                 ids = new ArrayList<>();
                 channelViewsToSend.put(peer, ids);
             }
+            if (!ids.contains(id)) {
+                ids.add(id);
+            }
+        });
+    }
+
+    public void addToMessagesReactionsToCheckQueue(MessageObject messageObject) {
+        Utilities.stageQueue.postRunnable(() -> {
+            long peer = messageObject.getDialogId();
+            int id = messageObject.getId();
+            ArrayList<Integer> ids = messagesReactionsToCheck.get(peer);
+
+            if (ids == null) {
+                ids = new ArrayList<>();
+                messagesReactionsToCheck.put(peer, ids);
+            }
+
             if (!ids.contains(id)) {
                 ids.add(id);
             }
@@ -11085,6 +11171,16 @@ public class MessagesController extends BaseController implements NotificationCe
                 FileLog.e("trying to get unknown update channel_id for " + update);
             }
             return 0;
+        }
+    }
+
+    public void processAvailableReactions(final ArrayList<TLRPC.TL_availableReaction> availableReactionsList, boolean fromQueue) {
+        availableReactions.clear();
+
+        for (int i = 0; i < availableReactionsList.size(); i++) {
+            TLRPC.TL_availableReaction reaction = availableReactionsList.get(i);
+
+            availableReactions.put(reaction.reaction, reaction);
         }
     }
 

@@ -47,6 +47,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.StringReader;
 import java.net.URLEncoder;
+import java.text.DecimalFormat;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -358,6 +359,21 @@ public class MessageObject {
         public boolean isRtl() {
             return (directionFlags & 1) != 0 && (directionFlags & 2) == 0;
         }
+    }
+
+    public static class ReactionBlock {
+        public int top;
+        public int left;
+        public int bottom;
+        public int right;
+        public int width;
+        public int height;
+        public TLRPC.TL_availableReaction availableReaction;
+        public TLRPC.TL_reactionCount reactionCount;
+        public StaticLayout textLayout;
+        public StaticLayout textLayoutWhite;
+        public ArrayList<Long> recentReactions;
+        public boolean canUseRecentReactions = false;
     }
 
     public static final int POSITION_FLAG_LEFT = 1;
@@ -868,6 +884,8 @@ public class MessageObject {
 
     public ArrayList<TextLayoutBlock> textLayoutBlocks;
 
+    public ArrayList<ReactionBlock> reactionBlocks;
+
     public MessageObject(int accountNum, TLRPC.Message message, String formattedMessage, String name, String userName, boolean localMessage, boolean isChannel, boolean supergroup, boolean edit) {
         localType = localMessage ? 2 : 1;
         currentAccount = accountNum;
@@ -996,6 +1014,8 @@ public class MessageObject {
         if (checkMediaExists) {
             checkMediaExistance();
         }
+
+        generateReactionsLayout();
     }
 
     private void createPathThumb() {
@@ -3174,6 +3194,8 @@ public class MessageObject {
     }
 
     public boolean checkLayout() {
+        generateReactionsLayout();
+
         if (type != 0 || messageOwner.peer_id == null || messageText == null || messageText.length() == 0) {
             return false;
         }
@@ -4532,6 +4554,78 @@ public class MessageObject {
             }
 
             linesOffset += currentBlockLinesCount;
+        }
+    }
+
+    public static String getRoughNumber(long value) {
+        if (value <= 999) {
+            return String.valueOf(value);
+        }
+
+        final String[] units = new String[]{"", "K", "M", "B", "P"};
+        int digitGroups = (int) (Math.log10(value) / Math.log10(1000));
+        return new DecimalFormat("#,##0.#").format(value / Math.pow(1000, digitGroups)) + "" + units[digitGroups];
+
+    }
+
+    public void generateReactionsLayout() {
+        reactionBlocks = new ArrayList<>();
+
+
+        if (messageOwner.reactions == null || messageOwner.reactions.results.isEmpty()) {
+            return;
+        }
+
+        int totalCount = 0;
+        boolean canUseUserPictures = !messageOwner.reactions.recent_reactons.isEmpty();
+        HashMap<String, ArrayList<Long>> reactionToUserIds = new HashMap<>();
+
+        for (TLRPC.TL_reactionCount reactionCount: messageOwner.reactions.results) {
+            totalCount += reactionCount.count;
+        }
+
+        for (TLRPC.TL_messageUserReaction userReaction: messageOwner.reactions.recent_reactons) {
+            ArrayList<Long> ids = reactionToUserIds.get(userReaction.reaction);
+
+            if (ids == null) {
+                ids = new ArrayList<>();
+                reactionToUserIds.put(userReaction.reaction, ids);
+            }
+
+            if (!ids.contains(userReaction.user_id)) {
+                ids.add(userReaction.user_id);
+            }
+        }
+
+        for (TLRPC.TL_reactionCount reactionCount: messageOwner.reactions.results) {
+            ReactionBlock reactionBlock = new ReactionBlock();
+
+            reactionBlock.reactionCount = reactionCount;
+            reactionBlock.availableReaction = MessagesController.getInstance(currentAccount).availableReactions.get(reactionCount.reaction);
+            reactionBlock.canUseRecentReactions = totalCount <= 3 && canUseUserPictures;
+
+            if (reactionBlock.canUseRecentReactions) {
+                reactionBlock.recentReactions = reactionToUserIds.get(reactionCount.reaction);
+            }
+
+            reactionBlock.height = AndroidUtilities.dp(30);
+
+            String countString = getRoughNumber(reactionCount.count);
+            TextPaint reactionCountPaint = new TextPaint(Theme.chat_namePaint);
+            TextPaint reactionCountPaintWhite = new TextPaint(Theme.chat_timePaint);
+            reactionCountPaintWhite.setColor(Theme.getColor(Theme.key_wallet_whiteText));
+            int reactionCountTextWidth = (int) Math.ceil(reactionCountPaint.measureText(countString)) + AndroidUtilities.dp(2);
+
+            reactionBlock.textLayout = new StaticLayout(countString, reactionCountPaint, reactionCountTextWidth, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
+            reactionBlock.textLayoutWhite = new StaticLayout(countString, reactionCountPaintWhite, reactionCountTextWidth, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
+
+            if (reactionBlock.canUseRecentReactions) {
+                reactionBlock.width = AndroidUtilities.dp(22 + 14 + 22 + 6) + AndroidUtilities.dp(16 * (reactionToUserIds.get(reactionCount.reaction).size() - 1));
+            } else {
+                reactionBlock.width = AndroidUtilities.dp(8 + 22 + 7 + 8) + reactionCountTextWidth;
+            }
+
+            reactionBlocks.add(reactionBlock);
         }
     }
 

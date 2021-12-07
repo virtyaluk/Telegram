@@ -1833,6 +1833,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
         loadDialogs(getAccountInstance());
         getMessagesController().loadPinnedDialogs(folderId, 0, null);
+        loadAvailableReactions(getAccountInstance());
+
         if (databaseMigrationHint != null && !getMessagesStorage().isDatabaseMigrationInProgress()) {
             View localView = databaseMigrationHint;
             if (localView.getParent() != null) {
@@ -1860,6 +1862,11 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             }
             dialogsLoaded[currentAccount] = true;
         }
+    }
+
+    private void loadAvailableReactions(AccountInstance accountInstance) {
+        MessagesController messagesController = accountInstance.getMessagesController();
+        messagesController.loadAvailableReactions();
     }
 
     @Override

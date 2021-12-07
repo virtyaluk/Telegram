@@ -178,7 +178,7 @@ public class GroupCreateSpan extends View {
             maxNameWidth = (Math.min(AndroidUtilities.displaySize.x, AndroidUtilities.displaySize.y) - AndroidUtilities.dp(32 + 18 + 57 * 2)) / 2;
         }
 
-        CharSequence name = TextUtils.ellipsize(firstName.replace('\n', ' '), textPaint, maxNameWidth, TextUtils.TruncateAt.END);
+        CharSequence name = TextUtils.ellipsize("xxx!" + firstName.replace('\n', ' '), textPaint, maxNameWidth, TextUtils.TruncateAt.END);
         nameLayout = new StaticLayout(name, textPaint, 1000, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
         if (nameLayout.getLineCount() > 0) {
             textWidth = (int) Math.ceil(nameLayout.getLineWidth(0));

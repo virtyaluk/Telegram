@@ -98,7 +98,7 @@ public class MessagesStorage extends BaseController {
     private CountDownLatch openSync = new CountDownLatch(1);
 
     private static volatile MessagesStorage[] Instance = new MessagesStorage[UserConfig.MAX_ACCOUNT_COUNT];
-    private final static int LAST_DB_VERSION = 86;
+    private final static int LAST_DB_VERSION = 87;
     private boolean databaseMigrationInProgress;
 
     public static MessagesStorage getInstance(int num) {
@@ -1525,6 +1525,12 @@ public class MessagesStorage extends BaseController {
             executeNoException("UPDATE scheduled_messages_v2 SET replydata = NULL");
             database.executeFast("PRAGMA user_version = 86").stepThis().dispose();
             version = 86;
+        }
+
+        if (version == 86) {
+            database.executeFast("CREATE TABLE available_reactions_v1(rid INTEGER, reaction BLOB, PRIMARY KEY(rid));").stepThis().dispose();
+            database.executeFast("PRAGMA user_version = 87").stepThis().dispose();
+            version = 87;
         }
 
         FileLog.d("MessagesStorage db migration finished");
@@ -3523,6 +3529,67 @@ public class MessagesStorage extends BaseController {
                 if (cursor != null) {
                     cursor.dispose();
                 }
+            }
+        });
+    }
+
+    public void getAvailableReactions() {
+        storageQueue.postRunnable(() -> {
+            SQLiteCursor cursor = null;
+
+            try {
+                cursor = database.queryFinalized("SELECT reaction FROM available_reactions_v1 ORDER BY rid ASC");
+                ArrayList<TLRPC.TL_availableReaction> availableReactions = new ArrayList<>();
+
+                while (cursor.next()) {
+                    NativeByteBuffer data = cursor.byteBufferValue(0);
+
+                    if (data != null) {
+                        TLRPC.TL_availableReaction reaction = TLRPC.TL_availableReaction.TLdeserialize(data, data.readInt32(false), false);
+
+                        data.reuse();
+
+                        if (reaction != null) {
+                            availableReactions.add(reaction);
+                        }
+                    }
+                }
+
+                AndroidUtilities.runOnUIThread(() -> getMessagesController().processAvailableReactions(availableReactions, true));
+            } catch (Exception e) {
+                FileLog.e(e);
+            } finally {
+                if (cursor != null) {
+                    cursor.dispose();
+                }
+            }
+        });
+    }
+
+    public void addAvailableReactions(ArrayList<TLRPC.TL_availableReaction> availableReactions) {
+        storageQueue.postRunnable(() -> {
+            try {
+                database.executeFast("DELETE FROM available_reactions_v1;").stepThis().dispose();
+
+                for (int i = 0; i < availableReactions.size(); i++) {
+                    TLRPC.TL_availableReaction reaction = availableReactions.get(i);
+                    SQLitePreparedStatement state = database.executeFast("INSERT INTO available_reactions_v1 VALUES(?, ?)");
+
+                    state.requery();
+                    state.bindInteger(1, i);
+
+                    NativeByteBuffer reactionData = new NativeByteBuffer(reaction.getObjectSize());
+                    reaction.serializeToStream(reactionData);
+                    state.bindByteBuffer(2, reactionData);
+
+                    state.step();
+                    state.dispose();
+                    reactionData.reuse();
+                }
+            } catch (Exception e) {
+                FileLog.e(e);
+            } finally {
+                AndroidUtilities.runOnUIThread(() -> getMessagesController().processAvailableReactions(availableReactions, true));
             }
         });
     }

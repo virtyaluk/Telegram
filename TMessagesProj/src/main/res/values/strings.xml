@@ -1444,6 +1444,12 @@
     <string name="InviteToGroupByLink">Invite to Group via Link</string>
     <string name="InviteLink">Invite Link</string>
     <string name="InviteLinks">Invite Links</string>
+    <string name="Reactions">Reactions</string>
+    <string name="ReactionsOff">Off</string>
+    <string name="ReactionsListTitle">Available reactions</string>
+    <string name="ReactionsEnable">Enable Reactions</string>
+    <string name="ReactionsHintChannel">Allow subscribers to react to channel posts.</string>
+    <string name="ReactionsHintGroup">Allow subscribers to react to group posts.</string>
     <string name="RevokeAlert">Are you sure you want to revoke this link? Once the link is revoked, no one will be able to join using it.</string>
     <string name="RevokeAlertNewLink">The previous invite link is now inactive. A new link has been generated.</string>
     <string name="RevokeButton">Revoke</string>

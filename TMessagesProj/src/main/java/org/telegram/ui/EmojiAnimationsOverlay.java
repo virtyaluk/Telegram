@@ -17,6 +17,7 @@ import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.ImageReceiver;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MediaDataController;
+import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
@@ -219,29 +220,37 @@ public class EmojiAnimationsOverlay implements NotificationCenter.NotificationCe
             for (int i = 0; i < drawingObjects.size(); i++) {
                 DrawingObject drawingObject = drawingObjects.get(i);
                 drawingObject.viewFound = false;
-                for (int k = 0; k < listView.getChildCount(); k++) {
-                    View child = listView.getChildAt(k);
-                    if (child instanceof ChatMessageCell) {
-                        ChatMessageCell cell = (ChatMessageCell) child;
-                        if (cell.getMessageObject().getId() == drawingObject.messageId) {
-                            drawingObject.viewFound = true;
-                            float viewX = listView.getX() + child.getX() + cell.getPhotoImage().getImageX();
-                            float viewY = listView.getY() + child.getY() + cell.getPhotoImage().getImageY();
-                            if (drawingObject.isOut) {
-                                viewX += -cell.getPhotoImage().getImageWidth() * 2 + AndroidUtilities.dp(24);
-                            } else {
-                                viewX += -AndroidUtilities.dp(24);
+
+                if (!drawingObject.isCustome) {
+                    for (int k = 0; k < listView.getChildCount(); k++) {
+                        View child = listView.getChildAt(k);
+                        if (child instanceof ChatMessageCell) {
+                            ChatMessageCell cell = (ChatMessageCell) child;
+                            if (cell.getMessageObject().getId() == drawingObject.messageId) {
+                                drawingObject.viewFound = true;
+                                float viewX = listView.getX() + child.getX() + cell.getPhotoImage().getImageX();
+                                float viewY = listView.getY() + child.getY() + cell.getPhotoImage().getImageY();
+                                if (drawingObject.isOut) {
+                                    viewX += -cell.getPhotoImage().getImageWidth() * 2 + AndroidUtilities.dp(24);
+                                } else {
+                                    viewX += -AndroidUtilities.dp(24);
+                                }
+                                viewY -= cell.getPhotoImage().getImageWidth();
+                                drawingObject.lastX = viewX;
+                                drawingObject.lastY = viewY;
+                                drawingObject.lastW = cell.getPhotoImage().getImageWidth();
+                                break;
                             }
-                            viewY -= cell.getPhotoImage().getImageWidth();
-                            drawingObject.lastX = viewX;
-                            drawingObject.lastY = viewY;
-                            drawingObject.lastW = cell.getPhotoImage().getImageWidth();
-                            break;
                         }
                     }
                 }
 
-                drawingObject.imageReceiver.setImageCoords(drawingObject.lastX + drawingObject.randomOffsetX, drawingObject.lastY + drawingObject.randomOffsetY, drawingObject.lastW * 3, drawingObject.lastW * 3);
+                if (drawingObject.isCustome) {
+                    drawingObject.imageReceiver.setImageCoords(drawingObject.lastX, drawingObject.lastY, drawingObject.lastW, drawingObject.lastW);
+                } else {
+                    drawingObject.imageReceiver.setImageCoords(drawingObject.lastX + drawingObject.randomOffsetX, drawingObject.lastY + drawingObject.randomOffsetY, drawingObject.lastW * 3, drawingObject.lastW * 3);
+                }
+
                 if (!drawingObject.isOut) {
                     canvas.save();
                     canvas.scale(-1f, 1, drawingObject.imageReceiver.getCenterX(), drawingObject.imageReceiver.getCenterY());
@@ -262,6 +271,80 @@ public class EmojiAnimationsOverlay implements NotificationCenter.NotificationCe
             }
             contentLayout.invalidate();
         }
+    }
+
+    public void showAddReaction(MessageObject messageObject, String reaction) {
+        if (chatActivity.isSecretChat() || messageObject == null) {
+            return;
+        }
+
+        if (drawingObjects.size() > 12) {
+            return;
+        }
+
+        listView.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+
+        int mWidth = listView.getResources().getDisplayMetrics().widthPixels;
+        int mHeight = listView.getResources().getDisplayMetrics().heightPixels;
+
+        TLRPC.TL_availableReaction availableReaction = chatActivity.getMessagesController().availableReactions.get(reaction);
+
+        DrawingObject effectAnimation = new DrawingObject();
+        effectAnimation.isCustome = true;
+        effectAnimation.document = availableReaction.effect_animation;
+        effectAnimation.lastW = 1024;
+        effectAnimation.lastX = mWidth / 2 - effectAnimation.lastW / 2;
+        effectAnimation.lastY = mHeight / 2 - effectAnimation.lastW / 2;
+
+        DrawingObject activateAnimation = new DrawingObject();
+        activateAnimation.isCustome = true;
+        activateAnimation.document = availableReaction.activate_animation;
+        activateAnimation.lastW = 512;
+        activateAnimation.lastX = mWidth / 2 - activateAnimation.lastW / 2;
+        activateAnimation.lastY = mHeight / 2 - activateAnimation.lastW / 2;
+
+        Integer lastIndex = lastAnimationIndex.get(availableReaction.effect_animation.id);
+        int currentIndex = lastIndex == null ? 0 : lastIndex;
+        lastAnimationIndex.put(availableReaction.effect_animation.id, (currentIndex + 1) % 4);
+
+        Integer lastIndex2 = lastAnimationIndex.get(availableReaction.activate_animation.id);
+        int currentIndex2 = lastIndex2 == null ? 0 : lastIndex2;
+        lastAnimationIndex.put(availableReaction.activate_animation.id, (currentIndex2 + 1) % 4);
+
+        ImageLocation effectImageLocation = ImageLocation.getForDocument(availableReaction.effect_animation);
+        effectAnimation.imageReceiver.setUniqKeyPrefix(currentIndex + "_" + effectAnimation.messageId + "_");
+
+        ImageLocation ActivateImageLocation = ImageLocation.getForDocument(availableReaction.activate_animation);
+        activateAnimation.imageReceiver.setUniqKeyPrefix(currentIndex2 + "_" + activateAnimation.messageId + "_");
+
+        effectAnimation.imageReceiver.setImage(effectImageLocation, "512_512", null, "tgs", set, 1);
+        activateAnimation.imageReceiver.setImage(ActivateImageLocation, "512_512", null, "tgs", set, 1);
+
+        effectAnimation.imageReceiver.setLayerNum(Integer.MAX_VALUE);
+        effectAnimation.imageReceiver.setAllowStartAnimation(true);
+        effectAnimation.imageReceiver.setAutoRepeat(0);
+
+        activateAnimation.imageReceiver.setLayerNum(Integer.MAX_VALUE);
+        activateAnimation.imageReceiver.setAllowStartAnimation(true);
+        activateAnimation.imageReceiver.setAutoRepeat(0);
+
+        if (activateAnimation.imageReceiver.getLottieAnimation() != null) {
+            activateAnimation.imageReceiver.getLottieAnimation().start();
+        }
+
+        if (effectAnimation.imageReceiver.getLottieAnimation() != null) {
+            effectAnimation.imageReceiver.getLottieAnimation().start();
+        }
+
+        drawingObjects.add(activateAnimation);
+        activateAnimation.imageReceiver.onAttachedToWindow();
+        activateAnimation.imageReceiver.setParentView(contentLayout);
+        contentLayout.invalidate();
+
+        drawingObjects.add(effectAnimation);
+        effectAnimation.imageReceiver.onAttachedToWindow();
+        effectAnimation.imageReceiver.setParentView(contentLayout);
+        contentLayout.invalidate();
     }
 
     public void onTapItem(ChatMessageCell view, ChatActivity chatActivity) {
@@ -474,5 +557,6 @@ public class EmojiAnimationsOverlay implements NotificationCenter.NotificationCe
         int messageId;
         TLRPC.Document document;
         ImageReceiver imageReceiver = new ImageReceiver();
+        boolean isCustome;
     }
 }

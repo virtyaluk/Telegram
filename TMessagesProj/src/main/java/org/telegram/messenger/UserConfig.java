@@ -48,6 +48,8 @@ public class UserConfig extends BaseController {
     public long migrateOffsetChannelId = -1;
     public long migrateOffsetAccess = -1;
     public boolean filtersLoaded;
+    public long lastAvailableReactionsSyncTime = -1;
+    public int lastAvailableReactionsHash = 0;
 
     public int sharingMyLocationUntil;
     public int lastMyLocationShareTime;
@@ -132,6 +134,8 @@ public class UserConfig extends BaseController {
                     editor.putInt("sharingMyLocationUntil", sharingMyLocationUntil);
                     editor.putInt("lastMyLocationShareTime", lastMyLocationShareTime);
                     editor.putBoolean("filtersLoaded", filtersLoaded);
+                    editor.putLong("lastAvailableReactionsSyncTime", lastAvailableReactionsSyncTime);
+                    editor.putInt("lastAvailableReactionsHash", lastAvailableReactionsHash);
 
                     editor.putInt("6migrateOffsetId", migrateOffsetId);
                     if (migrateOffsetId != -1) {
@@ -253,6 +257,8 @@ public class UserConfig extends BaseController {
             sharingMyLocationUntil = preferences.getInt("sharingMyLocationUntil", 0);
             lastMyLocationShareTime = preferences.getInt("lastMyLocationShareTime", 0);
             filtersLoaded = preferences.getBoolean("filtersLoaded", false);
+            lastAvailableReactionsSyncTime = preferences.getLong("lastAvailableReactionsSyncTime", -1);
+            lastAvailableReactionsHash = preferences.getInt("lastAvailableReactionsHash", 0);
 
             try {
                 String terms = preferences.getString("terms", null);

@@ -65,6 +65,7 @@ public class TLRPC {
     public static final int MESSAGE_FLAG_HAS_VIEWS          = 0x00000400;
     public static final int MESSAGE_FLAG_HAS_BOT_ID         = 0x00000800;
     public static final int MESSAGE_FLAG_EDITED             = 0x00008000;
+    public static final int MESSAGE_FLAG_HAS_REACTIONS      = 1 << 20;
 
     public static final int LAYER = 136;
 
